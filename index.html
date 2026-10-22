@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Library Book Reservation System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Library Book Reservation System</h1>
+    <p>Search books and manage issuing and returning.</p>
+    <input id="search" type="search" placeholder="Search by book title or author">
+    <ul id="books"><li>Loading books...</li></ul>
+    <p id="message" role="status"></p>
+  </main>
+  <script>
+    const list = document.getElementById("books");
+    const search = document.getElementById("search");
+    const message = document.getElementById("message");
+
+    async function loadBooks() {
+      try {
+        const response = await fetch("/api/books?q=" + encodeURIComponent(search.value));
+        const books = await response.json();
+        list.replaceChildren();
+        if (!books.length) {
+          const li = document.createElement("li");
+          li.textContent = "No books found.";
+          list.appendChild(li);
+          return;
+        }
+        books.forEach(book => {
+          const li = document.createElement("li");
+          const title = document.createElement("strong");
+          title.textContent = book.title;
+          const detail = document.createElement("p");
+          detail.textContent = "Author: " + book.author + " | " +
+            (book.available ? "Available" : "Issued");
+          const issue = document.createElement("button");
+          issue.textContent = "Issue";
+          issue.disabled = !book.available;
+          issue.onclick = () => bookAction("/api/issue?id=" + book.id);
+          const ret = document.createElement("button");
+          ret.textContent = "Return";
+          ret.className = "secondary";
+          ret.disabled = book.available;
+          ret.onclick = () => bookAction("/api/return?id=" + book.id);
+          li.append(title, detail, issue, ret);
+          list.appendChild(li);
+        });
+      } catch (error) {
+        list.innerHTML = "<li>Could not connect. Start the Java server first.</li>";
+      }
+    }
+
+    async function bookAction(url) {
+      const response = await fetch(url);
+      const result = await response.json();
+      message.textContent = result.message;
+      loadBooks();
+    }
+
+    search.addEventListener("input", loadBooks);
+    loadBooks();
+  </script>
+</body>
+</html>
